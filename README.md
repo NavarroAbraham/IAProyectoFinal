@@ -80,8 +80,8 @@ proyecto-ia-eafit/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/usuario/proyecto-ia-eafit.git
-cd proyecto-ia-eafit
+git clone https://github.com/NavarroAbraham/IAProyectoFinal
+cd IAProyectoFinal
 ```
 
 ### 2. Crear entorno virtual e instalar dependencias
@@ -160,13 +160,13 @@ Cada notebook carga automáticamente los artefactos del anterior desde `Google D
 *(Completar con valores reales tras el entrenamiento)*
 
 | Modelo | Accuracy | F1-macro | AUC-ROC |
-|---|---|---|---|
-| Baseline (clase mayoritaria) | X.XX | X.XX | 0.500 |
-| ResNet-50 Fase A (solo FC) | X.XX | X.XX | X.XX |
-| **ResNet-50 Fase A+B (mejor)** | **X.XX** | **X.XX** | **X.XX** |
+|---|---:|---:|---:|
+| Baseline (clase mayoritaria) | 0.116 | 0.026 | 0.500 |
+| ResNet-50 Fase A (solo FC) | N/A | N/A | N/A |
+| **ResNet-50 Fase A+B (mejor)** | **0.9981** | **0.9952** | **1.0000** |
 
 **Clases utilizadas:** 8 (Tomato, Potato, Corn, Pepper × sana/enferma)  
-**Dataset:** ~[N] imágenes tras split 70/15/15
+**Dataset:** 5,100 imágenes tras split 70/15/15
 
 ---
 
@@ -189,8 +189,8 @@ Cada notebook carga automáticamente los artefactos del anterior desde `Google D
 
 | Integrante | Correo | Contribución principal |
 |---|---|---|
-| Nombre Completo 1 | correo1@eafit.edu.co | EDA, preprocesamiento, visualizaciones |
-| Nombre Completo 2 | correo2@eafit.edu.co | CNN, Grad-CAM, LLM, app Streamlit |
+| Abraham Elias Navarro Martinez | aenavarrom@eafit.edu.co | EDA, preprocesamiento, visualizaciones |
+| David Rodriguez | correo2@eafit.edu.co | CNN, Grad-CAM, LLM, app Streamlit |
 
 ---
 

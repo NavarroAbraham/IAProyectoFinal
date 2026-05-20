@@ -9,6 +9,7 @@ Proyecto Final IA · EAFIT 2026-1
 import io
 import json
 import time
+import urllib.request
 import warnings
 from pathlib import Path
 
@@ -41,14 +42,37 @@ st.set_page_config(
 # Constantes y rutas
 # ─────────────────────────────────────────────────────────────────────────────
 BASE_DIR    = Path(__file__).parent.parent
-MODEL_PATH  = BASE_DIR / "models" / "checkpoints" / "best_resnet50.pth"
-CONFIG_PATH = BASE_DIR / "models" / "checkpoints" / "config_modelo.json"
+CKPT_DIR    = BASE_DIR / "models" / "checkpoints"
+MODEL_PATH  = CKPT_DIR / "best_resnet50.pth"
+CONFIG_PATH = CKPT_DIR / "config_modelo.json"
 
 IMG_SIZE      = 224
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD  = [0.229, 0.224, 0.225]
 
-# Fallback de clases si no hay config (para demo sin modelo real)
+# ── Hugging Face Hub — repositorio con los pesos del modelo ──────────────────
+# Después de entrenar, subir los archivos con:
+#   pip install huggingface_hub
+#   python -c "
+#     from huggingface_hub import HfApi
+#     api = HfApi()
+#     api.upload_file(path_or_fileobj='models/checkpoints/best_resnet50.pth',
+#                     path_in_repo='best_resnet50.pth',
+#                     repo_id='TU_USUARIO/plantai-eafit',
+#                     repo_type='model')
+#     api.upload_file(path_or_fileobj='models/checkpoints/config_modelo.json',
+#                     path_in_repo='config_modelo.json',
+#                     repo_id='TU_USUARIO/plantai-eafit',
+#                     repo_type='model')
+#   "
+HF_REPO_ID = "https://huggingface.co/Aenavarro/plantai-eafit" 
+HF_BASE    = f"https://huggingface.co/{HF_REPO_ID}/resolve/main"
+HF_FILES   = {
+    MODEL_PATH : f"{HF_BASE}/best_resnet50.pth",
+    CONFIG_PATH: f"{HF_BASE}/config_modelo.json",
+}
+
+# Clases por defecto (se sobreescriben con config_modelo.json)
 DEFAULT_CLASSES = [
     "Corn_(maize)___Common_rust_",
     "Corn_(maize)___healthy",
@@ -59,6 +83,70 @@ DEFAULT_CLASSES = [
     "Tomato___Late_blight",
     "Tomato___healthy",
 ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Descarga automática desde Hugging Face
+# ─────────────────────────────────────────────────────────────────────────────
+def _download_file(url: str, dest: Path, label: str) -> bool:
+    """
+    Descarga un archivo desde `url` a `dest` con barra de progreso en Streamlit.
+    Retorna True si fue exitoso, False si hubo error.
+    """
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        progress_text = f"Descargando {label}…"
+        bar = st.progress(0, text=progress_text)
+
+        def _reporthook(block_num, block_size, total_size):
+            if total_size > 0:
+                pct = min(block_num * block_size / total_size, 1.0)
+                bar.progress(pct, text=f"{progress_text} ({pct*100:.0f}%)")
+
+        urllib.request.urlretrieve(url, dest, _reporthook)
+        bar.progress(1.0, text=f"✅ {label} descargado")
+        time.sleep(0.4)
+        bar.empty()
+        return True
+    except Exception as e:
+        st.error(f"❌ Error descargando {label}: {e}")
+        return False
+
+
+@st.cache_resource(show_spinner=False)
+def ensure_model_files() -> bool:
+    """
+    Verifica que los archivos del modelo existan localmente.
+    Si no, los descarga desde Hugging Face Hub.
+    Retorna True si ambos archivos están disponibles al final.
+    """
+    hf_configured = HF_REPO_ID != "TU_USUARIO/plantai-eafit"
+    all_ok = True
+
+    for local_path, url in HF_FILES.items():
+        if local_path.exists():
+            continue  # ya está en disco — no descargar
+
+        label = local_path.name
+        if not hf_configured:
+            # HF no configurado aún — mostrar instrucciones en lugar de error
+            st.warning(
+                f"**{label} no encontrado.** "
+                f"Para el deploy en Streamlit Cloud:\n"
+                f"1. Entrena el modelo con `notebooks/02_cnn_training.ipynb`\n"
+                f"2. Sube los pesos a Hugging Face Hub (ver instrucciones en `app/main.py`)\n"
+                f"3. Actualiza `HF_REPO_ID` en `app/main.py` con tu usuario/repo\n\n"
+                f"Mientras tanto la app corre en **modo demo** con pesos aleatorios."
+            )
+            all_ok = False
+            continue
+
+        with st.spinner(f"Primera carga: descargando {label} desde Hugging Face…"):
+            ok = _download_file(url, local_path, label)
+        if not ok:
+            all_ok = False
+
+    return all_ok
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CSS personalizado
@@ -137,21 +225,27 @@ def is_healthy(class_name: str) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner="Cargando modelo CNN…")
 def load_model_and_config():
-    """Carga ResNet-50 y la configuración de clases. Cacheado entre sesiones."""
+    """
+    Carga ResNet-50 y la configuración de clases.
+    Si los archivos no existen localmente los descarga desde Hugging Face Hub.
+    Cacheado entre sesiones con st.cache_resource.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Cargar config
+    # 1. Asegurar que los archivos existen (descarga si hace falta)
+    files_ok = ensure_model_files()
+
+    # 2. Cargar config de clases
     if CONFIG_PATH.exists():
         with open(CONFIG_PATH) as f:
             cfg = json.load(f)
         class_names = cfg["class_names"]
     else:
-        st.warning("⚠️ config_modelo.json no encontrado — usando clases por defecto.")
         class_names = DEFAULT_CLASSES
 
     n_classes = len(class_names)
 
-    # Construir arquitectura idéntica a la entrenada en Fase 2
+    # 3. Construir arquitectura idéntica a la de Fase 2
     model = models.resnet50(weights=None)
     in_features = model.fc.in_features
     model.fc = nn.Sequential(
@@ -161,23 +255,19 @@ def load_model_and_config():
         nn.Linear(512, n_classes),
     )
 
+    # 4. Cargar pesos
     if MODEL_PATH.exists():
         model.load_state_dict(
-            torch.load(MODEL_PATH, map_location=device)
+            torch.load(MODEL_PATH, map_location=device, weights_only=True)
         )
         model_loaded = True
     else:
-        # Modo demo sin pesos reales (muestra la arquitectura pero predicciones aleatorias)
-        st.warning(
-            "⚠️ Modelo no encontrado en `models/checkpoints/best_resnet50.pth`. "
-            "Ejecutando en modo demo con pesos aleatorios."
-        )
-        model_loaded = False
+        model_loaded = False   # modo demo — pesos aleatorios
 
     model = model.to(device)
     model.eval()
 
-    # Configurar Grad-CAM++ sobre layer4
+    # 5. Grad-CAM++ sobre layer4
     cam = GradCAMPlusPlus(model=model, target_layers=[model.layer4[-1]])
 
     return model, cam, class_names, device, model_loaded
@@ -439,6 +529,13 @@ with st.sidebar:
 # MAIN — cargar modelo
 # ─────────────────────────────────────────────────────────────────────────────
 model, cam_obj, class_names, device, model_loaded = load_model_and_config()
+
+if not model_loaded:
+    st.info(
+        "**🧪 Modo demo** — pesos no encontrados. Las predicciones son aleatorias. "
+        "Sube `best_resnet50.pth` a Hugging Face y actualiza `HF_REPO_ID` en `app/main.py`.",
+        icon="ℹ️",
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TABS principales
