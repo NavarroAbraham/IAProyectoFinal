@@ -1,0 +1,47 @@
+# ── Entornos virtuales ────────────────────────────────────────────────────────
+venv/
+env/
+.env
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# ── Jupyter / Colab ───────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Modelos (muy pesados para GitHub) ────────────────────────────────────────
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+
+# ── Dataset (muy pesado — ver data/README_data.md) ───────────────────────────
+data/raw/
+data/processed/
+*.zip
+*.tar.gz
+
+# ── Artefactos de entrenamiento ───────────────────────────────────────────────
+/content/
+artifacts/
+gradcam_imgs/
+*.png
+!docs/*.png
+
+# ── Secretos ─────────────────────────────────────────────────────────────────
+.env
+kaggle.json
+*api_key*
+*secret*
+
+# ── OS / IDE ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Streamlit ─────────────────────────────────────────────────────────────────
+.streamlit/secrets.toml

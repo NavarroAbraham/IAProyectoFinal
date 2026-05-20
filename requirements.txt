@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Proyecto Final IA · EAFIT 2026-1
+# Clasificación de enfermedades en plantas — CNN + Grad-CAM + LLM
+# ─────────────────────────────────────────────────────────────────────────────
+# Instalar: pip install -r requirements.txt
+# Python >= 3.10 recomendado
+# Para GPU: instalar torch con CUDA desde https://pytorch.org/get-started/locally/
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Deep Learning ─────────────────────────────────────────────────────────────
+torch
+torchvision
+
+# ── Grad-CAM ──────────────────────────────────────────────────────────────────
+grad-cam
+
+# ── Visión / imagen ───────────────────────────────────────────────────────────
+opencv-python-headless   # headless: compatible con servidores sin display
+Pillow
+
+# ── Datos y ML clásico ────────────────────────────────────────────────────────
+numpy
+pandas
+scikit-learn
+
+# ── Visualización ─────────────────────────────────────────────────────────────
+matplotlib
+seaborn
+plotly                  # gráficos interactivos en Streamlit
+
+# ── LLM / API ─────────────────────────────────────────────────────────────────
+groq
+
+# ── App web ───────────────────────────────────────────────────────────────────
+streamlit
+
+# ── Utilidades ────────────────────────────────────────────────────────────────
+tqdm
+python-dotenv           # cargar GROQ_API_KEY desde .env en local
+
+# ── Dataset (solo para descarga inicial, no requerido en Streamlit Cloud) ─────
+# kaggle>=1.6.0
