@@ -111,6 +111,14 @@ def _download_file(url: str, dest: Path, label: str) -> bool:
         return False
 
 
+def _safe_remove(path: Path) -> None:
+    try:
+        if path.exists():
+            path.unlink()
+    except Exception:
+        pass
+
+
 @st.cache_resource(show_spinner=False)
 def ensure_model_files() -> bool:
     """
@@ -120,6 +128,26 @@ def ensure_model_files() -> bool:
     """
     hf_configured = HF_REPO_ID != "TU_USUARIO/plantai-eafit"
     all_ok = True
+
+    stale_config = False
+    if CONFIG_PATH.exists():
+        try:
+            with open(CONFIG_PATH) as f:
+                cfg = json.load(f)
+            loaded_classes = cfg.get("class_names", [])
+            stale_config = loaded_classes != DEFAULT_CLASSES
+        except Exception:
+            stale_config = True
+
+    if stale_config:
+        _safe_remove(CONFIG_PATH)
+        _safe_remove(MODEL_PATH)
+        st.warning(
+            "**⚠️ Artefacto local desactualizado** — se detectó una config de clases "
+            "que no coincide con el subconjunto de 8 clases. Se eliminarán los archivos "
+            "locales y se volverán a descargar desde Hugging Face.",
+            icon="⚠️",
+        )
 
     for local_path, url in HF_FILES.items():
         if local_path.exists():
@@ -268,6 +296,35 @@ def validate_class_consistency(class_names: list[str]) -> tuple[bool, str]:
     return True, "La lista de clases coincide con la configuración esperada."
 
 
+def load_class_names() -> tuple[list[str], bool, str]:
+    """Carga las clases del config y aplica un guard rail si no coinciden con el entrenamiento."""
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH) as f:
+            cfg = json.load(f)
+        raw_class_names = cfg.get("class_names", [])
+        if raw_class_names == DEFAULT_CLASSES:
+            return raw_class_names, True, "config_modelo.json coincide con las 8 clases esperadas."
+
+        missing = sorted(EXPECTED_CLASS_SET - set(raw_class_names))
+        extra = sorted(set(raw_class_names) - EXPECTED_CLASS_SET)
+        details = []
+        if missing:
+            details.append(f"faltan: {', '.join(missing)}")
+        if extra:
+            details.append(f"sobran: {', '.join(extra)}")
+        if not details:
+            details.append("el orden difiere del esperado")
+
+        message = (
+            "config_modelo.json no coincide con el subconjunto entrenado de 8 clases. "
+            f"Se cargaron {len(raw_class_names)} clases; {', '.join(details)}. "
+            "Se usará la lista esperada del proyecto para evitar desalineación de etiquetas."
+        )
+        return DEFAULT_CLASSES, False, message
+
+    return DEFAULT_CLASSES, False, "No existe config_modelo.json; se usa la lista esperada del proyecto."
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Grad-CAM++ local sin dependencia de OpenCV
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,12 +440,7 @@ def load_model_and_config():
     files_ok = ensure_model_files()
 
     # 2. Cargar config de clases
-    if CONFIG_PATH.exists():
-        with open(CONFIG_PATH) as f:
-            cfg = json.load(f)
-        class_names = cfg["class_names"]
-    else:
-        class_names = DEFAULT_CLASSES
+    class_names, config_ok, config_msg = load_class_names()
 
     n_classes = len(class_names)
 
@@ -404,10 +456,33 @@ def load_model_and_config():
 
     # 4. Cargar pesos
     if MODEL_PATH.exists():
-        model.load_state_dict(
-            torch.load(MODEL_PATH, map_location=device, weights_only=True)
-        )
-        model_loaded = True
+        try:
+            model.load_state_dict(
+                torch.load(MODEL_PATH, map_location=device, weights_only=True)
+            )
+            model_loaded = True
+        except Exception as e:
+            _safe_remove(MODEL_PATH)
+            files_ok = ensure_model_files()
+            if files_ok and MODEL_PATH.exists():
+                try:
+                    model.load_state_dict(
+                        torch.load(MODEL_PATH, map_location=device, weights_only=True)
+                    )
+                    model_loaded = True
+                except Exception as retry_error:
+                    st.error(
+                        "**⚠️ Artefacto incompatible** — los pesos descargados no coinciden con "
+                        "la arquitectura/clases esperadas del proyecto. "
+                        f"Detalle: {retry_error}"
+                    )
+                    model_loaded = False
+            else:
+                st.error(
+                    "**⚠️ Artefacto incompatible** — no fue posible recuperar una copia válida "
+                    f"de los pesos. Detalle original: {e}"
+                )
+                model_loaded = False
     else:
         model_loaded = False   # modo demo — pesos aleatorios
 
@@ -417,7 +492,7 @@ def load_model_and_config():
     # 5. Grad-CAM++ sobre layer4
     cam = GradCAMPlusPlus(model=model, target_layers=[model.layer4[-1]])
 
-    return model, cam, class_names, device, model_loaded
+    return model, cam, class_names, device, model_loaded, config_ok, config_msg
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -675,7 +750,7 @@ with st.sidebar:
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN — cargar modelo
 # ─────────────────────────────────────────────────────────────────────────────
-model, cam_obj, class_names, device, model_loaded = load_model_and_config()
+model, cam_obj, class_names, device, model_loaded, config_ok, config_msg = load_model_and_config()
 class_consistent, class_consistency_msg = validate_class_consistency(class_names)
 
 if not model_loaded:
@@ -687,9 +762,9 @@ if not model_loaded:
         icon="⚠️",
     )
 
-if not class_consistent:
+if not config_ok or not class_consistent:
     st.warning(
-        f"**⚠️ Verificación de consistencia** — {class_consistency_msg} "
+        f"**⚠️ Verificación de consistencia** — {config_msg if not config_ok else class_consistency_msg} "
         "Esto puede intercambiar cultivos o estados entre clases.",
         icon="⚠️",
     )
