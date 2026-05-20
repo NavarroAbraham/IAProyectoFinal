@@ -286,6 +286,12 @@ class GradCAMPlusPlus:
         activations = self.activations[0].float()
         gradients = self.gradients[0].float()
         cam_mask = self._compute_cam(activations, gradients)
+        cam_mask = F.interpolate(
+            cam_mask.unsqueeze(0).unsqueeze(0),
+            size=input_tensor.shape[-2:],
+            mode="bilinear",
+            align_corners=False,
+        ).squeeze(0).squeeze(0)
         return [cam_mask.detach().cpu().numpy()]
 
     @staticmethod
