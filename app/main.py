@@ -80,6 +80,8 @@ DEFAULT_CLASSES = [
     "Tomato___healthy",
 ]
 
+EXPECTED_CLASS_SET = set(DEFAULT_CLASSES)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Descarga automática desde Hugging Face
@@ -205,15 +207,65 @@ div[data-testid="metric-container"] {
 # Helpers de etiquetas
 # ─────────────────────────────────────────────────────────────────────────────
 def label_legible(class_name: str) -> tuple[str, str]:
-    """'Tomato___Late_blight' → ('Tomato', 'Late blight')"""
-    parts = class_name.split("___")
-    planta = parts[0].replace("_", " ").strip()
-    estado = parts[1].replace("_", " ").strip() if len(parts) > 1 else "Desconocido"
+    """Convierte etiquetas internas a un formato legible para la UI."""
+    normalized = class_name.replace("_", " ").replace("/", " ").strip()
+    parts = class_name.split("___", 1)
+
+    if len(parts) > 1:
+        planta = parts[0].replace("_", " ").strip()
+        estado = parts[1].replace("_", " ").strip()
+    else:
+        known_plants = [
+            "Corn (maize)",
+            "Corn maize",
+            "Pepper bell",
+            "Potato",
+            "Tomato",
+        ]
+        planta = ""
+        estado = ""
+        for plant in known_plants:
+            if normalized.lower().startswith(plant.lower()):
+                planta = plant
+                estado = normalized[len(plant):].strip(" -_/")
+                break
+
+        if not planta:
+            tokens = normalized.split(maxsplit=1)
+            planta = tokens[0].strip() if tokens else normalized
+            estado = tokens[1].strip() if len(tokens) > 1 else ""
+
+    if not estado:
+        estado = "Sana" if is_healthy(class_name) else "Enferma"
     return planta, estado
 
 
 def is_healthy(class_name: str) -> bool:
     return "healthy" in class_name.lower()
+
+
+def validate_class_consistency(class_names: list[str]) -> tuple[bool, str]:
+    """Comprueba si el orden y el contenido de clases coincide con el fallback esperado."""
+    if len(class_names) != len(DEFAULT_CLASSES):
+        return False, (
+            f"Se esperaban {len(DEFAULT_CLASSES)} clases y se cargaron {len(class_names)}."
+        )
+
+    if class_names != DEFAULT_CLASSES:
+        missing = sorted(EXPECTED_CLASS_SET - set(class_names))
+        extra = sorted(set(class_names) - EXPECTED_CLASS_SET)
+        details = []
+        if missing:
+            details.append(f"faltan: {', '.join(missing)}")
+        if extra:
+            details.append(f"sobran: {', '.join(extra)}")
+        detail_text = "; ".join(details) if details else "el orden difiere del esperado"
+        return False, (
+            "La lista activa de clases no coincide con la configuración esperada. "
+            f"{detail_text}."
+        )
+
+    return True, "La lista de clases coincide con la configuración esperada."
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -624,12 +676,22 @@ with st.sidebar:
 # MAIN — cargar modelo
 # ─────────────────────────────────────────────────────────────────────────────
 model, cam_obj, class_names, device, model_loaded = load_model_and_config()
+class_consistent, class_consistency_msg = validate_class_consistency(class_names)
 
 if not model_loaded:
-    st.info(
-        "**🧪 Modo demo** — pesos no encontrados. Las predicciones son aleatorias. "
+    st.warning(
+        "**🧪 Modo demo activo** — no se encontraron los pesos entrenados. "
+        "Las clases, la confianza y el Grad-CAM se generan con un modelo sin entrenar, "
+        "así que los resultados son aleatorios y no deben tomarse como diagnóstico. "
         "Sube `best_resnet50.pth` a Hugging Face y actualiza `HF_REPO_ID` en `app/main.py`.",
-        icon="ℹ️",
+        icon="⚠️",
+    )
+
+if not class_consistent:
+    st.warning(
+        f"**⚠️ Verificación de consistencia** — {class_consistency_msg} "
+        "Esto puede intercambiar cultivos o estados entre clases.",
+        icon="⚠️",
     )
 
 # ─────────────────────────────────────────────────────────────────────────────
