@@ -20,9 +20,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
-from pytorch_grad_cam import GradCAMPlusPlus
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from torchvision import models, transforms
 
 warnings.filterwarnings("ignore")
@@ -217,6 +214,99 @@ def label_legible(class_name: str) -> tuple[str, str]:
 
 def is_healthy(class_name: str) -> bool:
     return "healthy" in class_name.lower()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Grad-CAM++ local sin dependencia de OpenCV
+# ─────────────────────────────────────────────────────────────────────────────
+class ClassifierOutputTarget:
+    def __init__(self, category: int):
+        self.category = int(category)
+
+
+def show_cam_on_image(
+    image: np.ndarray,
+    cam_mask: np.ndarray,
+    use_rgb: bool = True,
+    colormap: int | str = 2,
+    image_weight: float = 0.55,
+) -> np.ndarray:
+    """Superpone un mapa de calor sobre una imagen RGB en rango [0, 1]."""
+    del colormap
+    heatmap = plt.get_cmap("jet")(np.clip(cam_mask, 0, 1))[..., :3]
+    if not use_rgb:
+        heatmap = heatmap[..., ::-1]
+
+    overlay = image_weight * np.clip(image, 0, 1) + (1.0 - image_weight) * heatmap
+    return np.clip(overlay * 255.0, 0, 255).astype(np.uint8)
+
+
+class GradCAMPlusPlus:
+    """Implementación ligera de Grad-CAM++ para evitar dependencias nativas."""
+
+    def __init__(self, model: torch.nn.Module, target_layers: list[nn.Module]):
+        if not target_layers:
+            raise ValueError("target_layers no puede estar vacío")
+
+        self.model = model
+        self.target_layer = target_layers[0]
+        self.activations = None
+        self.gradients = None
+        self._handles = [
+            self.target_layer.register_forward_hook(self._forward_hook),
+            self.target_layer.register_full_backward_hook(self._backward_hook),
+        ]
+
+    def _forward_hook(self, module, inputs, output):
+        self.activations = output
+
+    def _backward_hook(self, module, grad_input, grad_output):
+        self.gradients = grad_output[0]
+
+    def __call__(self, input_tensor: torch.Tensor, targets: list) -> list[np.ndarray]:
+        self.model.zero_grad(set_to_none=True)
+        self.activations = None
+        self.gradients = None
+
+        logits = self.model(input_tensor)
+        if targets:
+            target_scores = []
+            for target in targets:
+                target_idx = getattr(target, "category", target)
+                target_scores.append(logits[:, int(target_idx)])
+            score = torch.stack(target_scores, dim=0).sum()
+        else:
+            score = logits.max()
+
+        score.backward(retain_graph=False)
+
+        if self.activations is None or self.gradients is None:
+            raise RuntimeError("No se pudieron capturar activaciones y gradientes para Grad-CAM++")
+
+        activations = self.activations[0].float()
+        gradients = self.gradients[0].float()
+        cam_mask = self._compute_cam(activations, gradients)
+        return [cam_mask.detach().cpu().numpy()]
+
+    @staticmethod
+    def _compute_cam(activations: torch.Tensor, gradients: torch.Tensor) -> torch.Tensor:
+        grad_sq = gradients.pow(2)
+        grad_cube = gradients.pow(3)
+        spatial_sum = activations.sum(dim=(1, 2), keepdim=True)
+        eps = torch.finfo(gradients.dtype).eps
+
+        alpha_denom = 2.0 * grad_sq + spatial_sum * grad_cube
+        alpha_denom = torch.where(alpha_denom != 0.0, alpha_denom, torch.ones_like(alpha_denom))
+        alphas = grad_sq / (alpha_denom + eps)
+        positive_gradients = F.relu(gradients)
+        weights = (alphas * positive_gradients).sum(dim=(1, 2))
+
+        cam = F.relu((weights[:, None, None] * activations).sum(dim=0))
+        cam = cam - cam.min()
+        max_value = cam.max()
+        if float(max_value) > 0:
+            cam = cam / max_value
+        return cam
 
 
 # ─────────────────────────────────────────────────────────────────────────────
