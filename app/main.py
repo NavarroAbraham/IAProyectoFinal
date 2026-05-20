@@ -65,7 +65,7 @@ IMAGENET_STD  = [0.229, 0.224, 0.225]
 #                     repo_id='TU_USUARIO/plantai-eafit',
 #                     repo_type='model')
 #   "
-HF_REPO_ID = "https://huggingface.co/Aenavarro/plantai-eafit" 
+HF_REPO_ID = "https://huggingface.co/Aenavarro/plantai-eafit/tree/main" 
 HF_BASE    = f"https://huggingface.co/{HF_REPO_ID}/resolve/main"
 HF_FILES   = {
     MODEL_PATH : f"{HF_BASE}/best_resnet50.pth",
