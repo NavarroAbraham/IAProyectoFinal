@@ -68,16 +68,14 @@ HF_FILES   = {
     CONFIG_PATH: f"{HF_BASE}/config_modelo.json",
 }
 
-# Clases por defecto (se sobreescriben con config_modelo.json)
+# Clases por defecto del artefacto publicado en Hugging Face.
 DEFAULT_CLASSES = [
-    "Corn_(maize)___Common_rust_",
-    "Corn_(maize)___healthy",
-    "Pepper,_bell___Bacterial_spot",
-    "Pepper,_bell___healthy",
+    "Pepper__bell___Bacterial_spot",
+    "Pepper__bell___healthy",
     "Potato___Late_blight",
     "Potato___healthy",
-    "Tomato___Late_blight",
-    "Tomato___healthy",
+    "Tomato_Late_blight",
+    "Tomato_healthy",
 ]
 
 EXPECTED_CLASS_SET = set(DEFAULT_CLASSES)
@@ -144,7 +142,7 @@ def ensure_model_files() -> bool:
         _safe_remove(MODEL_PATH)
         st.warning(
             "**⚠️ Artefacto local desactualizado** — se detectó una config de clases "
-            "que no coincide con el subconjunto de 8 clases. Se eliminarán los archivos "
+            "que no coincide con el subconjunto de 6 clases. Se eliminarán los archivos "
             "locales y se volverán a descargar desde Hugging Face.",
             icon="⚠️",
         )
@@ -303,7 +301,7 @@ def load_class_names() -> tuple[list[str], bool, str]:
             cfg = json.load(f)
         raw_class_names = cfg.get("class_names", [])
         if raw_class_names == DEFAULT_CLASSES:
-            return raw_class_names, True, "config_modelo.json coincide con las 8 clases esperadas."
+            return raw_class_names, True, "config_modelo.json coincide con las 6 clases esperadas."
 
         missing = sorted(EXPECTED_CLASS_SET - set(raw_class_names))
         extra = sorted(set(raw_class_names) - EXPECTED_CLASS_SET)
@@ -316,13 +314,13 @@ def load_class_names() -> tuple[list[str], bool, str]:
             details.append("el orden difiere del esperado")
 
         message = (
-            "config_modelo.json no coincide con el subconjunto entrenado de 8 clases. "
+            "config_modelo.json no coincide con el subconjunto entrenado de 6 clases. "
             f"Se cargaron {len(raw_class_names)} clases; {', '.join(details)}. "
             "Se usará la lista esperada del proyecto para evitar desalineación de etiquetas."
         )
         return DEFAULT_CLASSES, False, message
 
-    return DEFAULT_CLASSES, False, "No existe config_modelo.json; se usa la lista esperada del proyecto."
+    return DEFAULT_CLASSES, False, "No existe config_modelo.json; se usa la lista esperada del proyecto (6 clases)."
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -768,6 +766,11 @@ if not config_ok or not class_consistent:
         "Esto puede intercambiar cultivos o estados entre clases.",
         icon="⚠️",
     )
+else:
+    st.info(
+        f"**Modelo cargado** — {len(class_names)} clases activas desde el repo de Hugging Face.",
+        icon="ℹ️",
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TABS principales
@@ -946,7 +949,7 @@ with tab_demo:
                 </div>
                 <div style="font-size:14px;color:#6c757d">
                     Formatos aceptados: JPG · JPEG · PNG<br>
-                    Cultivos disponibles: Tomate · Papa · Maíz · Pimiento
+                    Cultivos disponibles: Tomate · Papa · Pimiento
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1019,7 +1022,7 @@ with tab_about:
         El sistema integra tres componentes de IA en un pipeline end-to-end:
 
         1. **CNN (ResNet-50)** — Clasificación de la imagen.
-           Fine-tuning en 2 fases sobre el dataset PlantVillage (38 clases).
+              Fine-tuning en 2 fases sobre un subconjunto de PlantVillage (6 clases).
            Entrenado con PyTorch en Google Colab GPU T4.
 
         2. **Grad-CAM++** — Explicabilidad visual.
@@ -1033,7 +1036,7 @@ with tab_about:
         ### 📊 Dataset
         - **Fuente:** PlantVillage (Kaggle — emmarex/plantdisease)
         - **Total:** ~54,000 imágenes, 38 clases
-        - **Subconjunto usado:** 8 clases (4 cultivos × sana/enferma)
+        - **Subconjunto usado:** 6 clases (3 cultivos × sana/enferma)
         - **Split:** 70% train / 15% val / 15% test (random_state=42)
         """)
 
