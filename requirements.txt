@@ -3,35 +3,35 @@
 # Clasificación de enfermedades en plantas — CNN + Grad-CAM + LLM
 # ─────────────────────────────────────────────────────────────────────────────
 # ── OpenCV headless — PRIMERO para evitar conflicto con grad-cam ──────────────
-opencv-python-headless>=4.8.0
+opencv-python-headless
 
 # ── Deep Learning ─────────────────────────────────────────────────────────────
-torch>=2.1.0
-torchvision>=0.16.0
+torch
+torchvision
 
 # ── Grad-CAM (instalar DESPUÉS de opencv-python-headless) ─────────────────────
-grad-cam>=1.5.0
+grad-cam
 
 # ── Imagen ────────────────────────────────────────────────────────────────────
-Pillow>=10.0.0
+Pillow
 
 # ── Datos y ML clásico ────────────────────────────────────────────────────────
-numpy>=1.24.0
-pandas>=2.0.0
-scikit-learn>=1.3.0
+numpy
+pandas
+scikit-learn
 
-# ── Visualización ─────────────────────────────────────────────────────────────
-matplotlib>=3.7.0
-seaborn>=0.12.0
-plotly>=5.18.0
+# ── Visualización ────────────────────────────────────────────────────────────
+matplotlib>
+seaborn>
+plotly
 
 # ── LLM / API ─────────────────────────────────────────────────────────────────
-groq>=0.9.0
-huggingface_hub>=0.23.0
+groq
+huggingface_hub
 
 # ── App web ───────────────────────────────────────────────────────────────────
-streamlit>=1.35.0
+streamlit
 
 # ── Utilidades ────────────────────────────────────────────────────────────────
-tqdm>=4.65.0
-python-dotenv>=1.0.0
+tqdm
+python-dotenv
