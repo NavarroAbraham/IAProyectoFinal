@@ -13,7 +13,6 @@ import urllib.request
 import warnings
 from pathlib import Path
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
@@ -65,7 +64,7 @@ IMAGENET_STD  = [0.229, 0.224, 0.225]
 #                     repo_id='TU_USUARIO/plantai-eafit',
 #                     repo_type='model')
 #   "
-HF_REPO_ID = "https://huggingface.co/Aenavarro/plantai-eafit" 
+HF_REPO_ID = "Aenavarro/plantai-eafit"   
 HF_BASE    = f"https://huggingface.co/{HF_REPO_ID}/resolve/main"
 HF_FILES   = {
     MODEL_PATH : f"{HF_BASE}/best_resnet50.pth",
@@ -314,7 +313,7 @@ def predict_with_gradcam(
         img_np.astype(np.float32),
         cam_mask,
         use_rgb=True,
-        colormap=cv2.COLORMAP_JET,
+        colormap=2,  # cv2.COLORMAP_JET = 2 (evita importar cv2 con GUI)
         image_weight=1 - alpha,
     )
     overlay_pil = Image.fromarray(overlay_np)
