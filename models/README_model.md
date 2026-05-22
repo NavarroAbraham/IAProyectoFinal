@@ -8,6 +8,10 @@ Los pesos están disponibles en Google Drive:
 
 **[→ Descargar best_resnet50.pth](https://drive.google.com/drive/folders/1agbyv68Jck9VaQZouOh22eTBIsENsVY1?usp=drive_link)**
 
+También están disponibles en Hugging Face:
+
+**[→ Descargar desde Hugging Face](https://huggingface.co/Aenavarro/plantai-eafit/resolve/main/best_resnet50.pth)**
+
 ## Archivos necesarios
 
 Descargar y colocar en `models/checkpoints/`:
