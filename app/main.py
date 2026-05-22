@@ -1065,8 +1065,8 @@ with tab_about:
         ### 👥 Equipo
         | Integrante | Contribución |
         |---|---|
-        | Nombre 1 | EDA, preprocesamiento, visualizaciones |
-        | Nombre 2 | CNN, Grad-CAM, LLM, integración |
+        | Abraham Navarro | EDA, preprocesamiento, visualizaciones |
+        | David Rodriguez | CNN, Grad-CAM, LLM, integración |
         """)
 
     st.divider()
