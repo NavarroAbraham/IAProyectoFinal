@@ -132,7 +132,7 @@ Abrir en el navegador: **http://localhost:8501**
 ## 🚀 Demo en Streamlit Cloud
 
 La app está desplegada en:  
-**[→ plantai-eafit.streamlit.app](https://plantai-eafit.streamlit.app)** *(reemplazar con URL real)*
+**[→ plantai-eafit.streamlit.app]([https://plantai-eafit.streamlit.app](https://iaproyectofinal-a3cdfwtquzdpqqxj5vba6w.streamlit.app/))**
 
 > El modelo se carga desde Google Drive automáticamente en el deploy.  
 > Requiere ingresar la Groq API Key en el panel lateral de la app.
