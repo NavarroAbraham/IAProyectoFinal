@@ -186,7 +186,7 @@ Cada notebook carga automáticamente los artefactos del anterior desde `Google D
 ## 👥 Equipo y contribuciones
 
 | Integrante  | Contribución principal |
-|---|---|---|
+|---|---|
 | Abraham Elias Navarro Martinez | EDA, preprocesamiento, visualizaciones |
 | David Rodriguez | CNN, Grad-CAM, LLM, app Streamlit |
 
