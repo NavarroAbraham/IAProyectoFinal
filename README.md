@@ -157,8 +157,6 @@ Cada notebook carga automáticamente los artefactos del anterior desde `Google D
 
 ## 📊 Resultados
 
-*(Completar con valores reales tras el entrenamiento)*
-
 | Modelo | Accuracy | F1-macro | AUC-ROC |
 |---|---:|---:|---:|
 | Baseline (clase mayoritaria) | 0.116 | 0.026 | 0.500 |
@@ -187,10 +185,10 @@ Cada notebook carga automáticamente los artefactos del anterior desde `Google D
 
 ## 👥 Equipo y contribuciones
 
-| Integrante | Correo | Contribución principal |
+| Integrante  | Contribución principal |
 |---|---|---|
-| Abraham Elias Navarro Martinez | aenavarrom@eafit.edu.co | EDA, preprocesamiento, visualizaciones |
-| David Rodriguez | correo2@eafit.edu.co | CNN, Grad-CAM, LLM, app Streamlit |
+| Abraham Elias Navarro Martinez | EDA, preprocesamiento, visualizaciones |
+| David Rodriguez | CNN, Grad-CAM, LLM, app Streamlit |
 
 ---
 
