@@ -136,6 +136,14 @@ La app está desplegada en:
 
 > El modelo se carga desde Google Drive automáticamente en el deploy.  
 > Requiere ingresar la Groq API Key en el panel lateral de la app.
+>
+## 🎥 Demo
+
+[![Demo PlantAI](https://img.youtube.com/vi/krsbgVP6-7w/maxresdefault.jpg)](https://youtu.be/krsbgVP6-7w)
+
+> Haz clic en la imagen para ver la demo completa en YouTube.
+
+La demo muestra el flujo completo del sistema
 
 ---
 
